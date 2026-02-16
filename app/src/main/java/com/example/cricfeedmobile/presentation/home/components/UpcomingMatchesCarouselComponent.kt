@@ -1,5 +1,7 @@
 package com.example.cricfeedmobile.presentation.home.components
 
+import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.paging.LOG_TAG
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemKey
@@ -162,17 +165,32 @@ fun UpcomingMatchesCarouselComponent(
 
             if (upcomingMatches.loadState.append.endOfPaginationReached) {
                 item {
-                    Box( modifier = Modifier
-                            .width(80.dp)
-                            .height(160.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                   Card(
+                       modifier = Modifier
+                           .height(160.dp),
+                       shape = RoundedCornerShape(12.dp),
+                       colors = CardDefaults.cardColors(
+                           containerColor = Color.White
+                       ),
+                       elevation = CardDefaults.cardElevation(
+                           defaultElevation = 2.dp,
+                       )
+                   ) { Box( modifier = Modifier.clickable(true, onClick =
+                       {
+                           Log.d("asD", "sdf")
+                       })
+                       .width(80.dp)
+                       .height(160.dp),
+                       contentAlignment = Alignment.Center,
 
-                        Text(
-                            text = "View All"
-                        )
+                       ) {
 
-                    }
+                       Text(
+                           text = "View All"
+
+                       )
+
+                   }}
                 }
             }
         }

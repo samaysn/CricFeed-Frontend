@@ -1,6 +1,5 @@
 package com.example.cricfeedmobile.presentation.home.components
 
-import android.graphics.Paint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +14,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,7 +24,6 @@ import androidx.paging.compose.itemKey
 import com.example.cricfeedmobile.domain.model.FeedItem
 import com.example.cricfeedmobile.domain.model.UpcomingMatch
 import com.example.cricfeedmobile.presentation.home.VideoHighlightCard
-import dagger.hilt.android.internal.managers.HiltWrapper_ActivityRetainedComponentManager_ActivityRetainedLifecycleEntryPoint
 
 @Composable
 fun HomeFeedList(
@@ -46,7 +43,22 @@ fun HomeFeedList(
     ) {
         items(
             count = items.itemCount,
-            key = items.itemKey { it.id },
+//            key = items.itemKey { it.id },
+            key = items.itemKey { item ->
+                when (item) {
+                    is FeedItem.LiveMatch ->
+                        "live_${item.id}"
+                    is FeedItem.UpcomingMatchesCarousel ->
+                        "carousel_${item.id}"
+                    is FeedItem.NewsArticle ->
+                        "news_${item.id}"
+                    is FeedItem.MatchResult ->
+                        "result_${item.id}"
+                    is FeedItem.BannerAd -> "ad_${item.id}"
+                    is FeedItem.VideoHighlight ->
+                        "video_${item.id}"
+                }
+            },
 //            key = {index -> items[index]?.id ?: index }, // BUG : Aggressive prefetching at initial load
             contentType = { index ->
                 when (items[index]) {
