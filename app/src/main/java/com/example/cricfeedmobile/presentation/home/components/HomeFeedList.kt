@@ -1,8 +1,10 @@
 package com.example.cricfeedmobile.presentation.home.components
 
+import android.graphics.Paint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
@@ -22,6 +26,7 @@ import androidx.paging.compose.itemKey
 import com.example.cricfeedmobile.domain.model.FeedItem
 import com.example.cricfeedmobile.domain.model.UpcomingMatch
 import com.example.cricfeedmobile.presentation.home.VideoHighlightCard
+import dagger.hilt.android.internal.managers.HiltWrapper_ActivityRetainedComponentManager_ActivityRetainedLifecycleEntryPoint
 
 @Composable
 fun HomeFeedList(
@@ -41,8 +46,25 @@ fun HomeFeedList(
     ) {
         items(
             count = items.itemCount,
-            key = items.itemKey { it.id }
-//            key = {index -> items[index]?.id ?: index }
+            key = items.itemKey { it.id },
+//            key = {index -> items[index]?.id ?: index }, // BUG : Aggressive prefetching at initial load
+            contentType = { index ->
+                when (items[index]) {
+                    is FeedItem.LiveMatch ->
+                        "live_match"
+                    is FeedItem.UpcomingMatchesCarousel
+                        -> "carousel"
+                    is FeedItem.NewsArticle ->
+                        "news_article"
+                    is FeedItem.MatchResult ->
+                        "match_result"
+                    is FeedItem.BannerAd -> "banner_ad"
+                    is FeedItem.VideoHighlight ->
+                        "video_highlight"
+                    null -> "unknown"
+                }
+            }
+
         ) { index ->
             val item = items[index] ?: return@items
 
@@ -99,5 +121,29 @@ fun HomeFeedList(
                 }
             }
         }
+
+
+        if(items.loadState.append.endOfPaginationReached){
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ){
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "END REACHED",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.DarkGray
+                            )
+                        }
+                    }
+                }
+        }
+
     }
 }

@@ -30,7 +30,7 @@ class FeedRepositoryImpl @Inject constructor(
 
         return Pager(
             config = PagingConfig(pageSize = 18,
-                prefetchDistance = 6,
+                prefetchDistance = 1,
                 initialLoadSize = 18,
                 enablePlaceholders = false),
             pagingSourceFactory = { HomeFeedPagingSource(apiService)}
@@ -52,8 +52,9 @@ class FeedRepositoryImpl @Inject constructor(
 
         return Pager(
             config = PagingConfig(
-                pageSize = 10,
-                prefetchDistance = 3
+                pageSize = 4,
+                initialLoadSize = 4,
+                prefetchDistance = 1
             ),
             pagingSourceFactory = {
                 UpcomingMatchesWithPreviewPagingSource(

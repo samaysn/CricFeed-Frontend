@@ -6,6 +6,7 @@ import androidx.paging.PagingState
 import com.example.cricfeedmobile.data.mapper.toDomain
 import com.example.cricfeedmobile.data.remote.CricbuzzApiService
 import com.example.cricfeedmobile.domain.model.FeedItem
+import kotlinx.coroutines.delay
 
 class HomeFeedPagingSource(
     private val api: CricbuzzApiService
@@ -34,6 +35,7 @@ class HomeFeedPagingSource(
                 "page=$page loadSize=$loadSize items=${feedItems.size} endReached=$isEndReached"
             )
 
+            delay(2000)
             LoadResult.Page(
                 data = feedItems,
                 prevKey = if (page == 1) null else page - 1,

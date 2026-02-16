@@ -8,6 +8,7 @@ import androidx.paging.PagingState
 import com.example.cricfeedmobile.data.mapper.toDomain
 import com.example.cricfeedmobile.data.remote.CricbuzzApiService
 import com.example.cricfeedmobile.domain.model.UpcomingMatch
+import kotlinx.coroutines.delay
 import java.lang.Exception
 
 
@@ -25,7 +26,7 @@ class UpcomingMatchesWithPreviewPagingSource (
             val page = params.key ?: 1
 
             if( page == 1){
-                val response = apiService.getUpcomingMatches(page = 1, limit = 10)
+                val response = apiService.getUpcomingMatches(page = 1, limit = params.loadSize)
                 val apiMatches = response.matches.map { it.toDomain() }
 
 
@@ -48,13 +49,14 @@ class UpcomingMatchesWithPreviewPagingSource (
                     nextKey = if(response.pagination.hasNext) 2 else null
                 )
             } else {
-                val response = apiService.getUpcomingMatches(page, limit = 5 )
+                val response = apiService.getUpcomingMatches(page, limit = params.loadSize )
                 val matches = response.matches.map { it.toDomain() }
 
                 Log.d("NEW-PAGING", "NEW PAGE FETCH SUCCESS ${
                     matches.size
                 }")
 
+                delay(3000)
                 LoadResult.Page(
                     data = matches,
                     prevKey = if(page > 1) page - 1 else null,
