@@ -29,7 +29,7 @@ class FeedRepositoryImpl @Inject constructor(
     override fun getHomeFeed(): Flow<PagingData<FeedItem>> {
 
         return Pager(
-            config = PagingConfig(pageSize = 18,
+            config = PagingConfig(pageSize = 50,
                 prefetchDistance = 1,
                 initialLoadSize = 18,
                 enablePlaceholders = false),

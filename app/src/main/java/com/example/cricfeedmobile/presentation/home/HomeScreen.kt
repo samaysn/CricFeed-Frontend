@@ -18,14 +18,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation.NavController
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.cricfeedmobile.presentation.home.components.HomeFeedList
+import com.example.cricfeedmobile.presentation.navigation.Routes
+import okhttp3.Route
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    navController : NavController
 ) {
     val feedItems = viewModel.homeFeedFlow.collectAsLazyPagingItems()
     val upcomingItems = viewModel.upcomingMatchesFlow.collectAsLazyPagingItems()
@@ -50,7 +54,10 @@ fun HomeScreen(
 
             HomeFeedList(
                 items = feedItems,
-                upcomingItems = upcomingItems
+                upcomingItems = upcomingItems,
+                onClick = {
+                    navController.navigate(Routes.UPCOMING_MATCHES)
+                }
             )
 
             if (feedItems.loadState.refresh is LoadState.Loading) {

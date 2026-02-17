@@ -113,7 +113,8 @@ fun UpcomingMatchCard(match: UpcomingMatch) {
 
 @Composable
 fun UpcomingMatchesCarouselComponent(
-    upcomingMatches: LazyPagingItems<UpcomingMatch>
+    upcomingMatches: LazyPagingItems<UpcomingMatch>,
+    onClick : () -> Unit
 ) {
     val listState = rememberLazyListState()
 
@@ -139,7 +140,7 @@ fun UpcomingMatchesCarouselComponent(
 
             items(
                 count = upcomingMatches.itemCount,
-                key = upcomingMatches.itemKey { it.matchId },
+                key = upcomingMatches.itemKey { "carousel_${it.matchId}" },
                 contentType = {
                     "upcoming_match"
                 }
@@ -177,7 +178,7 @@ fun UpcomingMatchesCarouselComponent(
                        )
                    ) { Box( modifier = Modifier.clickable(true, onClick =
                        {
-                           Log.d("asD", "sdf")
+                           onClick()
                        })
                        .width(80.dp)
                        .height(160.dp),

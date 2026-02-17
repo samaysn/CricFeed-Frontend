@@ -28,7 +28,8 @@ import com.example.cricfeedmobile.presentation.home.VideoHighlightCard
 @Composable
 fun HomeFeedList(
     items: LazyPagingItems<FeedItem>,
-    upcomingItems: LazyPagingItems<UpcomingMatch>
+    upcomingItems: LazyPagingItems<UpcomingMatch>,
+    onClick : () -> Unit
 ) {
     val listState = rememberLazyListState()
 
@@ -54,7 +55,8 @@ fun HomeFeedList(
                         "news_${item.id}"
                     is FeedItem.MatchResult ->
                         "result_${item.id}"
-                    is FeedItem.BannerAd -> "ad_${item.id}"
+                    is FeedItem.BannerAd ->
+                        "ad_${item.id}"
                     is FeedItem.VideoHighlight ->
                         "video_${item.id}"
                 }
@@ -82,7 +84,7 @@ fun HomeFeedList(
 
             when (item) {
                 is FeedItem.UpcomingMatchesCarousel -> {
-                        UpcomingMatchesCarouselComponent(upcomingItems)
+                        UpcomingMatchesCarouselComponent(upcomingItems, onClick)
                 }
 
                 is FeedItem.LiveMatch -> {

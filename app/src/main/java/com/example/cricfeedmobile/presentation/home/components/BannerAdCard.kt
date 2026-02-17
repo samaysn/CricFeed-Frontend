@@ -23,7 +23,7 @@ fun BannerAdCard(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.4f)
             .height(120.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
