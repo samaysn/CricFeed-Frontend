@@ -1010,3 +1010,354 @@ This isn't a simple "list of items" tutorial. This is a **real-world production 
 
 **Last Updated**: 2026-02-12
 **Project Status**: Production-ready architecture learned ✅
+
+---
+
+## Use Cases (Interactors)
+
+### What is a Use Case?
+
+A **Use Case** (also called an **Interactor**) is a class in the **Domain layer** that encapsulates a **single business operation**. It sits between the ViewModel (Presentation layer) and the Repository (Data layer).
+
+```
+Presentation Layer
+    ↓ calls
+Use Case (Domain Layer)   ← NEW LAYER
+    ↓ calls
+Repository (Domain Interface)
+    ↓ implemented by
+Repository Impl (Data Layer)
+```
+
+### Why Do We Need Them?
+
+**Right now**, our ViewModel talks directly to the Repository:
+
+```kotlin
+// HomeViewModel.kt  ← CURRENT (no use cases)
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val feedRepository: FeedRepository   // ← Direct dependency
+) : ViewModel() {
+    val upcomingMatchesFlow = feedRepository
+        .getUpcomingMatches()
+        .cachedIn(viewModelScope)
+}
+```
+
+This works fine for simple cases. But imagine this growing scenario:
+
+- `HomeViewModel` needs upcoming matches (for the carousel preview)
+- `UpcomingMatchesViewModel` needs upcoming matches (for the full screen)
+- Both need the **same business logic**: e.g., filter out cancelled matches, sort by date, log analytics
+
+**Without Use Cases** - you duplicate logic in every ViewModel:
+```kotlin
+// HomeViewModel.kt
+val carouselFlow = feedRepository.getUpcomingMatches()
+    // same logic copy-pasted...
+    .map { pagingData -> pagingData.filter { it.status != "CANCELLED" } }
+
+// UpcomingMatchesViewModel.kt
+val allMatchesFlow = feedRepository.getUpcomingMatches()
+    // same logic copy-pasted again...
+    .map { pagingData -> pagingData.filter { it.status != "CANCELLED" } }
+```
+
+**With Use Cases** - business logic lives in ONE place:
+```kotlin
+// GetUpcomingMatchesUseCase.kt (Domain layer)
+class GetUpcomingMatchesUseCase @Inject constructor(
+    private val feedRepository: FeedRepository
+) {
+    operator fun invoke(): Flow<PagingData<UpcomingMatch>> {
+        return feedRepository.getUpcomingMatches()
+            .map { pagingData ->
+                pagingData.filter { it.status != "CANCELLED" }
+            }
+    }
+}
+
+// HomeViewModel.kt
+val carouselFlow = getUpcomingMatchesUseCase()   // ← Single line, reused
+
+// UpcomingMatchesViewModel.kt
+val allMatchesFlow = getUpcomingMatchesUseCase() // ← Same use case, same logic
+```
+
+### The Rule of Thumb
+
+| Scenario | Use a Use Case? |
+|---|---|
+| ViewModel directly calls a repository method, no logic | Optional (YAGNI) |
+| Same data + logic needed in **multiple ViewModels** | **Yes - always** |
+| Business rules (filtering, sorting, validation) on data | **Yes - always** |
+| Combining data from **multiple repositories** | **Yes - always** |
+| Simple CRUD passthrough, single ViewModel | No |
+
+---
+
+### The Upcoming Matches Use Case - Our Exact Problem
+
+**The Problem**: Both the Home Feed carousel preview and the Upcoming Matches screen need upcoming match data. Currently the `FeedRepositoryImpl` has a hacky shared state:
+
+```kotlin
+// FeedRepositoryImpl.kt  ← CURRENT (problematic)
+class FeedRepositoryImpl @Inject constructor(...) {
+
+    // ⚠️  Mutable shared state — bug waiting to happen
+    private var upcomingMatchPreview: List<UpcomingMatch> = emptyList()
+
+    override fun getHomeFeed(): Flow<PagingData<FeedItem>> {
+        return Pager(...).flow.map { pagingData ->
+            pagingData.map { feedItem ->
+                if (feedItem is FeedItem.UpcomingMatchesCarousel) {
+                    upcomingMatchPreview = feedItem.matches  // ← Side effect inside a map!
+                }
+                feedItem
+            }
+        }
+    }
+
+    override fun getUpcomingMatches(): Flow<PagingData<UpcomingMatch>> {
+        return Pager(
+            ...,
+            pagingSourceFactory = {
+                UpcomingMatchesWithPreviewPagingSource(
+                    apiService = apiService,
+                    previewMatches = upcomingMatchPreview  // ← Depends on side effect above
+                )
+            }
+        ).flow
+    }
+}
+```
+
+**Why this is dangerous**:
+1. `upcomingMatchPreview` is mutable state on the Repository (which is a singleton via Hilt). Race conditions in multi-threaded scenarios.
+2. `getUpcomingMatches()` silently depends on `getHomeFeed()` being called first. That's a hidden ordering dependency.
+3. Repository is supposed to be a **dumb data gateway** — it shouldn't hold business state or have side effects.
+
+A Use Case is the correct place to coordinate this.
+
+---
+
+### How to Implement: Step-by-Step
+
+#### Step 1: Create the Use Case file
+
+**Where**: `domain/usecase/GetUpcomingMatchesUseCase.kt`
+
+**Why this location**: Use Cases are pure business logic — no Android framework, no Retrofit, no Room. They belong in the Domain layer, which has zero platform dependencies.
+
+```kotlin
+package com.example.cricfeedmobile.domain.usecase
+
+import androidx.paging.PagingData
+import com.example.cricfeedmobile.domain.model.UpcomingMatch
+import com.example.cricfeedmobile.domain.repository.FeedRepository
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+
+class GetUpcomingMatchesUseCase @Inject constructor(
+    private val feedRepository: FeedRepository
+) {
+    // operator fun invoke() lets you call the use case like a function:
+    // getUpcomingMatchesUseCase()  instead of  getUpcomingMatchesUseCase.execute()
+    operator fun invoke(): Flow<PagingData<UpcomingMatch>> {
+        return feedRepository.getUpcomingMatches()
+        // Business logic goes HERE, not in ViewModel, not in Repository
+        // Example: .map { pagingData -> pagingData.filter { !it.isCancelled } }
+    }
+}
+```
+
+**`operator fun invoke()` explained**:
+This Kotlin feature lets you call the class instance itself as a function. It's the standard Use Case convention in Android:
+```kotlin
+// Without invoke operator:
+useCase.execute()
+
+// With invoke operator (cleaner):
+useCase()
+```
+
+---
+
+#### Step 2: Update the Repository to clean up the side effect
+
+The current `FeedRepositoryImpl` uses `upcomingMatchPreview` as shared mutable state to "pass" data from `getHomeFeed()` to `getUpcomingMatches()`. The Use Case lets us **remove this entirely**.
+
+**File to change**: `data/repository/FeedRepositoryImpl.kt`
+
+**Changes needed**:
+1. Delete the `private var upcomingMatchPreview` field
+2. Remove the `.map { }` block in `getHomeFeed()` that assigned preview matches
+3. Simplify `getUpcomingMatches()` to use `UpcomingMatchesPagingSource` directly (the non-preview one)
+
+```kotlin
+// Cleaned-up FeedRepositoryImpl.kt
+class FeedRepositoryImpl @Inject constructor(
+    private val apiService: CricbuzzApiService
+) : FeedRepository {
+
+    // ← upcomingMatchPreview is GONE
+
+    override fun getHomeFeed(): Flow<PagingData<FeedItem>> {
+        return Pager(
+            config = PagingConfig(pageSize = 18, prefetchDistance = 1, initialLoadSize = 18),
+            pagingSourceFactory = { HomeFeedPagingSource(apiService) }
+        ).flow
+        // ← The .map { } side effect is GONE
+    }
+
+    override fun getUpcomingMatches(): Flow<PagingData<UpcomingMatch>> {
+        return Pager(
+            config = PagingConfig(pageSize = 10, initialLoadSize = 5, prefetchDistance = 1),
+            pagingSourceFactory = { UpcomingMatchesPagingSource(apiService) } // ← Direct, no preview
+        ).flow
+    }
+}
+```
+
+**Key insight**: The repository no longer needs to know about the "preview first, then paginate" behaviour. The Use Case or ViewModel decides how to use the data. Repository is now a pure, stateless data gateway.
+
+---
+
+#### Step 3: Update HomeViewModel to use the Use Case
+
+**File to change**: `presentation/home/HomeViewModel.kt`
+
+```kotlin
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val feedRepository: FeedRepository,
+    private val getUpcomingMatches: GetUpcomingMatchesUseCase   // ← Inject use case
+) : ViewModel() {
+
+    val homeFeedFlow: Flow<PagingData<FeedItem>> = feedRepository
+        .getHomeFeed()
+        .cachedIn(viewModelScope)
+
+    // Both the carousel AND the full screen call the SAME use case
+    val upcomingMatchesFlow: Flow<PagingData<UpcomingMatch>> = getUpcomingMatches()
+        .cachedIn(viewModelScope)
+}
+```
+
+---
+
+#### Step 4: Understand how both screens share the same flow
+
+**Home Screen (Carousel)**:
+```kotlin
+// HomeScreen.kt
+val homeItems = viewModel.homeFeedFlow.collectAsLazyPagingItems()
+
+// When rendering the carousel item from the feed:
+is FeedItem.UpcomingMatchesCarousel -> {
+    UpcomingMatchesCarouselComponent(
+        carousel = item,         // ← Uses preview data from feed item (5 items)
+        onViewAllClick = { navController.navigate(Routes.UpcomingMatches) }
+    )
+}
+```
+
+The carousel preview (5 items) still comes from `FeedItem.UpcomingMatchesCarousel.matches` baked into the home feed response — that hasn't changed.
+
+**Full Screen (Upcoming Matches)**:
+```kotlin
+// UpcomingMatchesScreen.kt
+val upcomingItems = viewModel.upcomingMatchesFlow.collectAsLazyPagingItems()
+// ← Uses the same getUpcomingMatchesUseCase() result, fully paginated
+```
+
+Both screens go through `GetUpcomingMatchesUseCase`, which calls `feedRepository.getUpcomingMatches()`. **Single source of truth**.
+
+---
+
+### Before vs After: Architecture Diagram
+
+**BEFORE (no use cases)**:
+```
+HomeViewModel ──────────────────────────────────► FeedRepositoryImpl
+                                                   (has mutable state ⚠️)
+UpcomingMatchesViewModel (future) ──────────────► FeedRepositoryImpl
+                                                   (duplicated logic ⚠️)
+```
+
+**AFTER (with use case)**:
+```
+HomeViewModel ──────────────────────────────► GetUpcomingMatchesUseCase
+                                                        │
+UpcomingMatchesViewModel (future) ──────────────────────┘
+                                                        │
+                                               FeedRepository (interface)
+                                                        │
+                                               FeedRepositoryImpl (stateless ✅)
+```
+
+---
+
+### When You Add More Business Logic
+
+Once the Use Case exists, adding business logic is clean and isolated:
+
+```kotlin
+class GetUpcomingMatchesUseCase @Inject constructor(
+    private val feedRepository: FeedRepository,
+    private val analyticsService: AnalyticsService   // ← Can inject other domain services
+) {
+    operator fun invoke(filterSeries: String? = null): Flow<PagingData<UpcomingMatch>> {
+        analyticsService.logEvent("upcoming_matches_viewed")
+
+        return feedRepository.getUpcomingMatches()
+            .map { pagingData ->
+                pagingData
+                    .filter { match -> filterSeries == null || match.seriesName == filterSeries }
+                    .filter { match -> match.status != "CANCELLED" }
+            }
+    }
+}
+```
+
+None of this logic leaks into the ViewModel or Repository. That's the power of Use Cases.
+
+---
+
+### Common Mistake: One Use Case Per Action, Not Per Screen
+
+❌ **Wrong**:
+```kotlin
+class HomeScreenUseCase(...)    // Too broad — what does "home screen" mean as a business operation?
+class UpcomingScreenUseCase(...)
+```
+
+✅ **Correct**:
+```kotlin
+class GetUpcomingMatchesUseCase(...)  // One clear business operation
+class GetHomeFeedUseCase(...)
+class GetMatchResultsUseCase(...)
+```
+
+Each Use Case = one verb (Get, Create, Cancel, Filter) + one noun (UpcomingMatches, HomeFeed).
+
+---
+
+### Summary: What You're Building
+
+| Layer | Class | Responsibility |
+|---|---|---|
+| Presentation | `HomeViewModel` | Holds UI state, calls use cases |
+| Presentation | `UpcomingMatchesScreen` | Renders paginated list |
+| **Domain** | **`GetUpcomingMatchesUseCase`** | **Business logic for fetching matches** |
+| Domain | `FeedRepository` (interface) | Contract for data access |
+| Data | `FeedRepositoryImpl` | Retrofit + PagingSource wiring |
+| Data | `UpcomingMatchesPagingSource` | Page-by-page API calls |
+
+The Use Case is the **glue between "what the app wants to do" and "how the data is fetched"**. ViewModels know what to ask for. Repositories know how to fetch it. Use Cases know **why** and **when** — the business rules.
+
+---
+
+**Last Updated**: 2026-02-17
+**Topics Added**: Use Cases (Interactors) — Domain layer business logic

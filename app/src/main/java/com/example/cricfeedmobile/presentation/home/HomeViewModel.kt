@@ -8,13 +8,15 @@ import com.example.cricfeedmobile.domain.model.FeedItem
 import com.example.cricfeedmobile.domain.model.MatchResult
 import com.example.cricfeedmobile.domain.model.UpcomingMatch
 import com.example.cricfeedmobile.domain.repository.FeedRepository
+import com.example.cricfeedmobile.domain.usecase.GetUpcomingMatchesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val feedRepository: FeedRepository
+    private val feedRepository: FeedRepository,
+    private val getUpcomingMatches: GetUpcomingMatchesUseCase
 ) : ViewModel(){
 
     val homeFeedFlow: Flow<PagingData<FeedItem>> = feedRepository
@@ -24,8 +26,14 @@ class HomeViewModel @Inject constructor(
 //    val upcomingMatchesFlow : Flow<PagingData<UpcomingMatch>> = feedRepository
 //        .getUpcomingMatches()
 //        .cachedIn(viewModelScope)
-val upcomingMatchesFlow : Flow<PagingData<UpcomingMatch>> = feedRepository
-            .getUpcomingMatches()
+
+
+//val upcomingMatchesFlow : Flow<PagingData<UpcomingMatch>> = feedRepository
+//            .getUpcomingMatches()
+//        .cachedIn(viewModelScope)
+
+
+    val upcomingMatchesFlow: Flow<PagingData<UpcomingMatch>> = getUpcomingMatches()
         .cachedIn(viewModelScope)
 
     

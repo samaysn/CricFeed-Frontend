@@ -17,6 +17,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.example.cricfeedmobile.domain.usecase.GetUpcomingMatchesUseCase
 import com.example.cricfeedmobile.presentation.navigation.Routes
 import com.example.cricfeedmobile.presentation.upcoming.UpcomingMatchesScreen
 import okhttp3.Route
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity() {
 fun NavigationStack(){
     val navController = rememberNavController()
 
+
     NavHost(
         navController = navController,
         startDestination = Routes.HOME
@@ -56,10 +58,10 @@ fun NavigationStack(){
 
         composable(Routes.UPCOMING_MATCHES){
             val homeViewModel : HomeViewModel = hiltViewModel()
-            val upcomingMatces = homeViewModel.upcomingMatchesFlow.collectAsLazyPagingItems()
+            val upcomingMatches = homeViewModel.upcomingMatchesFlow.collectAsLazyPagingItems()
 
             UpcomingMatchesScreen(
-              upcomingMatches =  upcomingMatces,
+                homeViewModel = hiltViewModel(),
                 onBackClick = {
                     navController.navigateUp()
                 }
