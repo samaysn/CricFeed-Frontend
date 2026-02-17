@@ -25,30 +25,6 @@ class UpcomingMatchesWithPreviewPagingSource (
         return try {
             val page = params.key ?: 1
 
-            if( page == 1){
-                val response = apiService.getUpcomingMatches(page = 1, limit = params.loadSize)
-                val apiMatches = response.matches.map { it.toDomain() }
-
-
-                val mergedMatches = (previewMatches + apiMatches)
-                    .distinctBy {
-                        it.matchId
-                    }
-
-                Log.d("NEW-PAGING", "PREVIEW PAGE SUCCESS MERGED : ${
-                    mergedMatches.size
-                }, apiMatches : ${
-                    apiMatches.size
-                }, apiService : ${
-                    response.matches.size
-                }, previewMatches : ${previewMatches.size}")
-
-                LoadResult.Page(
-                    data = mergedMatches,
-                    prevKey = null,
-                    nextKey = if(response.pagination.hasNext) 2 else null
-                )
-            } else {
                 val response = apiService.getUpcomingMatches(page, limit = params.loadSize )
                 val matches = response.matches.map { it.toDomain() }
 
@@ -62,7 +38,6 @@ class UpcomingMatchesWithPreviewPagingSource (
                     prevKey = if(page > 1) page - 1 else null,
                     nextKey = if(response.pagination.hasNext) page + 1 else null
                 )
-            }
         } catch (e : Exception){
             LoadResult.Error(e)
         }

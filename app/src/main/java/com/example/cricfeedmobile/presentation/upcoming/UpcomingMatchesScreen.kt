@@ -73,8 +73,7 @@ fun UpcomingMatchesScreen (
         Box(
             modifier = Modifier.padding(
                 paddingValues
-            )
-            ,
+            ).fillMaxSize()
 
         ) {
             LazyColumn(
@@ -86,7 +85,7 @@ fun UpcomingMatchesScreen (
             ) {
                 items(
                     count = upcomingMatches.itemCount,
-                    key = upcomingMatches.itemKey { "upcoming_match-${it.matchId + Random.nextInt()}-${it.matchType}"},
+                    key = upcomingMatches.itemKey { "upcoming_match-${it.matchId}-${it.matchType}"},
                     contentType = {
                         "upcoming_match"
                     }
@@ -128,6 +127,18 @@ fun UpcomingMatchesScreen (
                             CircularProgressIndicator()
                         }
                     }
+                }
+
+                item {
+                    if (upcomingMatches.loadState.refresh is LoadState.Loading){
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+
                 }
 
             }
