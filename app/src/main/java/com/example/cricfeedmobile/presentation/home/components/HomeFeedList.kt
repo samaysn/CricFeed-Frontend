@@ -45,23 +45,23 @@ fun HomeFeedList(
         items(
             count = items.itemCount,
 //            key = items.itemKey { it.id },
-//            key = items.itemKey { item ->
-//                when (item) {
-//                    is FeedItem.LiveMatch ->
-//                        "live_${item.id}"
-//                    is FeedItem.UpcomingMatchesCarousel ->
-//                        "carousel_${item.id}"
-//                    is FeedItem.NewsArticle ->
-//                        "news_${item.id}"
-//                    is FeedItem.MatchResult ->
-//                        "result_${item.id}"
-//                    is FeedItem.BannerAd ->
-//                        "ad_${item.id}"
-//                    is FeedItem.VideoHighlight ->
-//                        "video_${item.id}"
-//                }
-//            },
-            key = {index -> items[index]?.id ?: index }, // BUG : Aggressive prefetching at initial load
+            key = items.itemKey { item ->
+                when (item) {
+                    is FeedItem.LiveMatch ->
+                        "live_${item.id}"
+                    is FeedItem.UpcomingMatchesCarousel ->
+                        "carousel_${item.id}"
+                    is FeedItem.NewsArticle ->
+                        "news_${item.id}"
+                    is FeedItem.MatchResult ->
+                        "result_${item.id}"
+                    is FeedItem.BannerAd ->
+                        "ad_${item.id}"
+                    is FeedItem.VideoHighlight ->
+                        "video_${item.id}"
+                }
+            },
+//            key = {index -> items[index]?.id ?: index }, // BUG : Aggressive prefetching at initial load
             contentType = { index ->
                 when (items[index]) {
                     is FeedItem.LiveMatch ->
