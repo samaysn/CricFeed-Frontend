@@ -44,12 +44,12 @@ fun HomeScreen(
         topBar = {
             TopAppBar(title = { Text("CricFeed") })
         }
-    ) { padding ->
+    ) { paddingValues ->
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(top = paddingValues.calculateTopPadding())
                 .background(Color.Gray)
         ) {
 

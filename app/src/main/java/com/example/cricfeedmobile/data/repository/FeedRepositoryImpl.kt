@@ -105,6 +105,7 @@ class FeedRepositoryImpl @Inject constructor(
             config = PagingConfig(
                 pageSize = 5,
                 prefetchDistance = 1,
+                initialLoadSize = 5,
                 enablePlaceholders = false
             ),
             pagingSourceFactory = {
