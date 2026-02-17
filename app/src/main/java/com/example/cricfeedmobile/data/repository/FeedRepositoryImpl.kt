@@ -29,10 +29,12 @@ class FeedRepositoryImpl @Inject constructor(
     override fun getHomeFeed(): Flow<PagingData<FeedItem>> {
 
         return Pager(
-            config = PagingConfig(pageSize = 50,
+            config = PagingConfig(
+                pageSize = 18,
                 prefetchDistance = 1,
                 initialLoadSize = 18,
-                enablePlaceholders = false),
+                enablePlaceholders = false
+            ),
             pagingSourceFactory = { HomeFeedPagingSource(apiService)}
         ).flow.map { pagingData ->
             pagingData.map {  feedItem ->

@@ -56,7 +56,7 @@ class UpcomingMatchesWithPreviewPagingSource (
                     matches.size
                 }")
 
-                delay(3000)
+                delay(1000)
                 LoadResult.Page(
                     data = matches,
                     prevKey = if(page > 1) page - 1 else null,
