@@ -1,8 +1,11 @@
 package com.example.cricfeedmobile.presentation.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation3.runtime.NavBackStack
@@ -22,25 +25,26 @@ fun AppNavGraph() {
     // Home tab's own back stack, lifted here so AppNavGraph can read its top
     // entry and hide/show the bottom bar when UpcomingMatches is open
     val homeBackStack = rememberNavBackStack(HomeRoot)
+    val resultBackStack = rememberNavBackStack(MatchResultsRoot)
+    val currentTab = rootBackStack.lastOrNull()
 
+    val saveableStateHolder = rememberSaveableStateHolder()
     Scaffold(
         bottomBar = {
-            val currentKey = rootBackStack.lastOrNull()
-
             // Bottom bar is visible only when:
             // • We are on a bottom-nav tab  AND
             // • The Home tab is NOT deep inside UpcomingMatches
-            val showBottomBar = when (currentKey) {
+            val showBottomBar = when (currentTab) {
                 Home       -> homeBackStack.lastOrNull() == HomeRoot
                 MatchResults -> true
                 else       -> false
             }
 
-            if (showBottomBar && currentKey != null) {
+            if (showBottomBar && currentTab != null) {
                 CricFeedBottomNavBar(
-                    currentKey = currentKey,
+                    currentKey = currentTab,
                     onTabSelected = { selectedKey ->
-                        if (currentKey != selectedKey) {
+                        if (currentTab != selectedKey) {
                             // Swap the active tab — clear and replace
                             rootBackStack.clear()
                             rootBackStack.add(selectedKey)
@@ -50,24 +54,26 @@ fun AppNavGraph() {
             }
         }
     ) { innerPadding ->
-        NavDisplay(
-            backStack = rootBackStack,
-            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
-            onBack = { /* tabs don't back-navigate into each other */ },
-            entryProvider = entryProvider {
+        Box(
+            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()).fillMaxSize())
+            {
 
+            saveableStateHolder.SaveableStateProvider(
+                key = "home"
+            ) {
                 // ── Home Tab — renders HomeNestedFlow which has its own NavDisplay ──
-                entry<Home> {
-                    HomeNestedFlow(homeBackStack = homeBackStack)
-                }
+                HomeNestedFlow(homeBackStack = homeBackStack, visible = currentTab == Home)
+            }
 
-                // ── Match Results Tab ──────────────────────────────────────────────
-                entry<MatchResults> {
-                    MatchResultsScreen(viewModel = hiltViewModel())
+                saveableStateHolder.SaveableStateProvider(
+                    key = "results"
+                ) {
+                    // ── Match Results Tab ──────────────────────────────────────────────
+                    ResultsNestedFlow(resultBackStack = resultBackStack,visible = currentTab == MatchResults )
                 }
 
             }
-        )
+
     }
 }
 
@@ -80,7 +86,8 @@ fun AppNavGraph() {
  *   [HomeRoot, UpcomingMatches] → UpcomingMatchesScreen (bottom bar hidden)
  */
 @Composable
-fun HomeNestedFlow(homeBackStack: NavBackStack<NavKey>) {
+fun HomeNestedFlow(homeBackStack: NavBackStack<NavKey>, visible : Boolean) {
+    if (!visible) return
     NavDisplay(
         backStack = homeBackStack,
         onBack = {
@@ -103,6 +110,23 @@ fun HomeNestedFlow(homeBackStack: NavBackStack<NavKey>) {
                 )
             }
 
+        }
+    )
+}
+
+
+@Composable
+fun ResultsNestedFlow(resultBackStack : NavBackStack<NavKey>, visible : Boolean){
+    if (!visible) return
+    NavDisplay(
+        backStack = resultBackStack,
+        onBack = {
+            if(resultBackStack.size > 1) resultBackStack.removeLastOrNull()
+        },
+        entryProvider = entryProvider {
+            entry<MatchResultsRoot> {
+                MatchResultsScreen(viewModel = hiltViewModel())
+            }
         }
     )
 }

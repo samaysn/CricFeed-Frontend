@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 
 // Root screen of the Home tab's own nested navigation
 @Serializable data object HomeRoot : NavKey
+@Serializable data object MatchResultsRoot : NavKey
 
 // Pushed onto the Home tab's back stack from HomeRoot
 @Serializable data object UpcomingMatches : NavKey
