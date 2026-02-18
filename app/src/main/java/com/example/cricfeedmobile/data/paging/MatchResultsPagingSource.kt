@@ -7,6 +7,7 @@ import com.example.cricfeedmobile.data.remote.CricbuzzApiService
 import com.example.cricfeedmobile.domain.model.FeedItem
 import javax.inject.Inject
 import com.example.cricfeedmobile.domain.model.MatchResult
+import kotlinx.coroutines.delay
 
 class MatchResultsPagingSource @Inject constructor(
     private val apiService: CricbuzzApiService
@@ -36,6 +37,8 @@ class MatchResultsPagingSource @Inject constructor(
             }else {
                 null
             }
+
+           delay(700)
 
            LoadResult.Page(
                 data = matchResults,

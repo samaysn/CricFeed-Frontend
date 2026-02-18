@@ -5,39 +5,32 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.currentRecomposeScope
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.text.Paragraph
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation3.runtime.NavKey
 import kotlinx.coroutines.launch
 
 @Composable
 fun CricFeedBottomNavBar (
-    navController: NavController
+    currentKey : NavKey,
+    onTabSelected : (NavKey) -> Unit
 ){
-
     val navItems = listOf(
-        BottomNavItem.Home,
-        BottomNavItem.MatchResults
+        BottomNavItem.HomeTab,
+        BottomNavItem.MatchResultsTab
     )
-
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
 
     NavigationBar {
 
         navItems.forEach { item ->
             NavigationBarItem(
-                selected = currentRoute == item.route,
-                onClick ={
-                    navController.navigate(item.route){
-                        popUpTo(navController.graph.findStartDestination().id){
-                            saveState = true
-                        }
-
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                selected = currentKey == item.key,
+                onClick = {
+                    onTabSelected(item.key)
                 },
                 icon = {
                     Icon(
@@ -46,7 +39,9 @@ fun CricFeedBottomNavBar (
                     )
                 },
                 label = {
-                    Text(item.label)
+                    Text(
+                        item.label
+                    )
                 }
             )
         }
